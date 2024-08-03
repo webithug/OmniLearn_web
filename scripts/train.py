@@ -24,7 +24,7 @@ def parse_arguments():
     parser.add_argument("--batch", type=int, default=250, help="Batch size")
     parser.add_argument("--epoch", type=int, default=200, help="Max epoch")
     parser.add_argument("--warm_epoch", type=int, default=3, help="Warm up epochs")
-    parser.add_argument("--stop_epoch", type=int, default=30, help="Epochs before reducing lr")
+    parser.add_argument("--stop_epoch", type=int, default=30, help="Epochs before reducing lr") # if it's 0, the learning rate will start decrease from the first epoch
     parser.add_argument("--lr", type=float, default=3e-5, help="learning rate")
     parser.add_argument("--wd", type=float, default=1e-5, help="weight decay")
     parser.add_argument("--b1", type=float, default=0.95, help="beta1 for Lion optimizer")
@@ -105,7 +105,8 @@ def main():
     if flags.fine_tune:
         if hvd.rank()==0:
             model_name = utils.get_model_name(flags,flags.fine_tune).replace(flags.dataset,'jetclass').replace('fine_tune','baseline').replace(flags.mode,'all')
-            model_path = os.path.join(flags.folder, 'checkpoints', model_name)
+            # model_path = os.path.join(flags.folder, 'checkpoints', model_name)
+            model_path = os.path.join("/afs/cern.ch/user/w/weipow/OmniLearn_web", 'checkpoints', model_name)
             logger.info(f"Loading model weights from {model_path}")
             model.load_weights(model_path,by_name=True,skip_mismatch=True)
 
@@ -125,6 +126,7 @@ def main():
         checkpoint_name = utils.get_model_name(flags,flags.fine_tune,
                                                add_string="_{}".format(flags.nid) if flags.nid>0 else '')
         checkpoint_path = os.path.join(flags.folder, 'checkpoints', checkpoint_name)
+        # checkpoint_path = os.path.join('/afs/cern.ch/user/w/weipow/OmniLearn_web', 'checkpoints', checkpoint_name)
         checkpoint_callback = keras.callbacks.ModelCheckpoint(checkpoint_path,
                                                               save_best_only=True,mode='auto',
                                                               save_weights_only=True,
@@ -140,9 +142,13 @@ def main():
                       validation_steps =val_loader.steps_per_epoch,
                       verbose=hvd.rank() == 0,
                       )
+    
+    # save the first training process to training history 
     if hvd.rank() ==0:
         with open(os.path.join(flags.folder,'histories',utils.get_model_name(flags,flags.fine_tune).replace(".weights.h5",".pkl")),"wb") as f:
             pickle.dump(hist.history, f)
+        # with open(os.path.join('/afs/cern.ch/user/w/weipow/OmniLearn_web','histories',utils.get_model_name(flags,flags.fine_tune).replace(".weights.h5",".pkl")),"ab") as f:
+        #     pickle.dump(hist.history, f)
                             
 
 if __name__ == "__main__":

@@ -160,7 +160,6 @@ def load_or_evaluate_model(flags, test,folder_name):
                 os.makedirs(os.path.join(flags.folder,folder_name,'npy'))
             np.save(npy_file,{'y':y,'pred':pred})
 
-        
         return y, pred
 
 def main():

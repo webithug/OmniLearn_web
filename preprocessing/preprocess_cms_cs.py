@@ -62,21 +62,38 @@ def balance_classes(x, y, z):
 #Preprocessing for the top tagging dataset
 def preprocess(data,folder,nparts=100, use_pid = True):
     print("Creating labels")
-    y = data.jets_i[:,-1] # y is the hard_pid (1d array)
 
-    y[(np.abs(y)==1)|(np.abs(y)==2)|(np.abs(y)==3)] = 1 #uds all turn into 1
-    y[y==21] = 0
+    # y = data.jets_i[:,-1] # y is the hard_pid (1d array)
 
-    print(f"y = {y.shape}")
+    # y[(np.abs(y)==1)|(np.abs(y)==2)|(np.abs(y)==3)] = 1 #uds all turn into 1
+    # y[y==21] = 0
+
+    # print(f"y = {y.shape}")
+    # print(f"data.particles = {data.particles.shape}")
+
+    # # jets is a 2d (n,4) array with the 4 columns are jet_pt, jet_eta, jet_phi, jet_m
+    # jets = np.stack([data.jets_f[:,0],data.jets_f[:,4],data.jets_f[:,2],data.jets_f[:,3]],-1)  
+    # jets = jets[np.abs(y)<2]
+    # particles = data.particles[np.abs(y)<2]
+    # y = y[np.abs(y) < 2] #Reject c and b jets
 
 
-    print(f"data.particles = {data.particles.shape}")
+
+    # y is the hard_pid (1d array)    
+    y = data.jets_i[:,-1] 
 
     # jets is a 2d (n,4) array with the 4 columns are jet_pt, jet_eta, jet_phi, jet_m
-    jets = np.stack([data.jets_f[:,0],data.jets_f[:,4],data.jets_f[:,2],data.jets_f[:,3]],-1)  
-    jets = jets[np.abs(y)<2]
-    particles = data.particles[np.abs(y)<2]
-    y = y[np.abs(y) < 2] #Reject c and b jets
+    jets = np.stack([data.jets_f[:,0],data.jets_f[:,4],data.jets_f[:,2],data.jets_f[:,3]],-1) 
+
+    # keep only s=3 and c=4 jets
+    jets = jets[np.logical_or(np.abs(y) == 3, np.abs(y) == 4)]
+    particles = data.particles[np.logical_or(np.abs(y) == 3, np.abs(y) == 4)]
+    y = y[np.logical_or(np.abs(y) == 3, np.abs(y) == 4)]
+
+    # make s jets 0, c jets 1
+    y[np.abs(y) == 3] = 0
+    y[np.abs(y) == 4] = 1
+
 
     # raise Exception(f"particles.shape = {particles[0]}")
 
@@ -179,7 +196,7 @@ if __name__=='__main__':
                           cache_dir=flags.folder,
                           collection='CMS2011AJets', 
                           dataset='sim', 
-                          subdatasets={'SIM300_Jet300_pT375-infGeV', 'SIM1400_Jet300_pT375-infGeV'}, 
+                          subdatasets={'SIM300_Jet300_pT375-infGeV'}, 
                           validate_files=False,
                           store_pfcs=True, store_gens=False, verbose=0)
     

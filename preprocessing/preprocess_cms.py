@@ -122,8 +122,8 @@ def preprocess(data,folder,nparts=100, use_pid = True):
     delta_phi[delta_phi<= - np.pi] +=  2*np.pi
 
 
-    points[:,:,0] = (particles[:,:,1] - jets[:,None,1]) # eta
-    points[:,:,1] = delta_phi # phi
+    points[:,:,0] = (particles[:,:,1] - jets[:,None,1]) # delta eta
+    points[:,:,1] = delta_phi # delta phi
     points[:,:,2] = np.ma.log(1.0 - particles[:,:,0]/jets[:,None,0]).filled(0)    
     points[:,:,3] = np.ma.log(particles[:,:,0]).filled(0)
     points[:,:,4] = np.ma.log(1.0 - particles[:,:,3]/jet_e[:,None]).filled(0)

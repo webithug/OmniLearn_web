@@ -684,6 +684,21 @@ class CMSQGDataLoader(DataLoader):
         self.num_classes = self.y.shape[1]
         self.steps_per_epoch = None #will pass none, otherwise needs to add repeat to tf data
         self.files = [path]
+        
+
+class QibinDataLoader(DataLoader):
+    def __init__(self, path, batch_size=512,rank=0,size=1):
+        super().__init__(path, batch_size, rank, size)
+
+        self.load_data(path, batch_size,rank,size)
+        self.y = np.identity(2)[self.y.astype(np.int32)]
+        self.num_pad = 0
+        self.num_feat = self.X.shape[2] + self.num_pad #missing inputs
+        self.num_classes = self.y.shape[1]
+        self.steps_per_epoch = None #will pass none, otherwise needs to add repeat to tf data
+        self.files = [path]
+        self.part_names = ['$\Delta \eta_{t}$', '$\Delta \phi_{t}$', '$\Delta \eta_{j}$', '$\Delta \phi_{j}$', 'log($p_{T}$)','log($E$)']
+        self.jet_names = ['Jet p$_{T}$ [GeV]', 'Jet $\eta$', 'Jet Mass [GeV]','Multiplicity']
 
         
     

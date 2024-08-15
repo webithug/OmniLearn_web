@@ -5,6 +5,7 @@ from tensorflow import keras
 import horovod.tensorflow.keras as hvd
 import argparse
 import logging
+import matplotlib.pyplot as plt
 import pickle
 
 # Custom local imports
@@ -87,7 +88,7 @@ def main():
     utils.setup_gpus()
     flags = parse_arguments()
 
-    print(f"flags.folder={flags.folder}")
+    # print(f"flags.folder={flags.folder}")
 
     train_loader, val_loader = get_data_loader(flags)
     
@@ -106,7 +107,9 @@ def main():
         if hvd.rank()==0:
             model_name = utils.get_model_name(flags,flags.fine_tune).replace(flags.dataset,'jetclass').replace('fine_tune','baseline').replace(flags.mode,'all')
             # model_path = os.path.join(flags.folder, 'checkpoints', model_name)
-            model_path = os.path.join("/afs/cern.ch/user/w/weipow/OmniLearn_web", 'checkpoints', model_name)
+
+            # path to where your checkpoints folder is
+            model_path = os.path.join("/pscratch/sd/w/weipow/CMS_Open_Data", 'checkpoints', model_name)
             logger.info(f"Loading model weights from {model_path}")
             model.load_weights(model_path,by_name=True,skip_mismatch=True)
 
@@ -122,28 +125,59 @@ def main():
         keras.callbacks.ReduceLROnPlateau(monitor='val_loss',patience=200, min_lr=1e-6)
     ]
 
+    # save trained model weights at the checkpoints folder
     if hvd.rank() == 0:
         checkpoint_name = utils.get_model_name(flags,flags.fine_tune,
                                                add_string="_{}".format(flags.nid) if flags.nid>0 else '')
         checkpoint_path = os.path.join(flags.folder, 'checkpoints', checkpoint_name)
         # checkpoint_path = os.path.join('/afs/cern.ch/user/w/weipow/OmniLearn_web', 'checkpoints', checkpoint_name)
         checkpoint_callback = keras.callbacks.ModelCheckpoint(checkpoint_path,
-                                                              save_best_only=True,mode='auto',
+                                                              save_best_only=True, # Saves only the best model based on validation loss
+                                                              mode='auto', # Automatically determines the condition (min or max based on the monitored metric) 
                                                               save_weights_only=True,
-                                                              period=1)
+                                                              period=1 # Every epoch
+                                                              )
         callbacks.append(checkpoint_callback)
 
-    hist =  model.fit(train_loader.make_tfdata(),
+    # train the model
+    hist =  model.fit(train_loader.make_tfdata(), # dataset for training
                       epochs=flags.epoch,
                       validation_data=val_loader.make_tfdata(),
                       batch_size=flags.batch,
-                      callbacks=callbacks,                  
+                      callbacks=callbacks, # callbacks: do some special things at different stages
                       steps_per_epoch=train_loader.steps_per_epoch,
                       validation_steps =val_loader.steps_per_epoch,
                       verbose=hvd.rank() == 0,
                       )
+
+    # plot learning curve
+
+    # # Plot training & validation accuracy values, if accuracy is a metric
+    # if 'accuracy' in hist.history:
+    #     plt.figure(figsize=(10, 4))
+    #     plt.subplot(1, 2, 1)
+    #     plt.plot(hist.history['accuracy'], color='dodgerblue')
+    #     if 'val_loss' in hist.history:
+    #         plt.plot(hist.history['val_accuracy'], color='maroon')
+    #     plt.title('Model Accuracy')
+    #     plt.ylabel('Accuracy')
+    #     plt.xlabel('Epoch')
+    #     plt.legend(['Train', 'Validation'], loc='upper left')
+
+    # Plot training & validation loss values
+    plt.figure(figsize=(10, 8))
+    # plt.subplot(1, 2, 2)
+    plt.plot(hist.history['loss'], color='dodgerblue')
+    if 'val_loss' in hist.history:
+        plt.plot(hist.history['val_loss'], color='maroon')
+    plt.title('Model Loss')
+    plt.ylabel('Loss')
+    plt.xlabel('Epoch')
+    plt.legend(['Train', 'Validation'], loc='upper left')
+
+    plt.savefig(f"/global/homes/w/weipow/My_omnilearn_output/learning_curve.jpg", dpi=300)
     
-    # save the first training process to training history 
+    # save the training history 
     if hvd.rank() ==0:
         with open(os.path.join(flags.folder,'histories',utils.get_model_name(flags,flags.fine_tune).replace(".weights.h5",".pkl")),"wb") as f:
             pickle.dump(hist.history, f)

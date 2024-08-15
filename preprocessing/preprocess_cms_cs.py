@@ -79,7 +79,7 @@ def preprocess(data,folder,nparts=100, use_pid = True):
 
 
 
-    # y is the hard_pid (1d array)    
+    # y is the hard_pid (1d array). This would be the label of data    
     y = data.jets_i[:,-1] 
 
     # jets is a 2d (n,4) array with the 4 columns are jet_pt, jet_eta, jet_phi, jet_m
@@ -87,7 +87,10 @@ def preprocess(data,folder,nparts=100, use_pid = True):
 
     # keep only s=3 and c=4 jets
     jets = jets[np.logical_or(np.abs(y) == 3, np.abs(y) == 4)]
-    particles = data.particles[np.logical_or(np.abs(y) == 3, np.abs(y) == 4)]
+    # particles is a list of 2d array. the length of this list is same as the number of jets. 
+    # each entry of list is an 2d array of size (x, 6), where x is the number of particles in the jet. see /pfcs for the 6 info.
+    particles = data.particles[np.logical_or(np.abs(y) == 3, np.abs(y) == 4)] 
+
     y = y[np.logical_or(np.abs(y) == 3, np.abs(y) == 4)]
 
     # make s jets 0, c jets 1
@@ -114,12 +117,12 @@ def preprocess(data,folder,nparts=100, use_pid = True):
 
     print("Balancing classes")
     #Balance the number of signal and background events
-    particles, y,jets = balance_classes(particles, y,jets)
+    particles, y, jets = balance_classes(particles, y,jets)
 
     print("Total sample size after balancing: {}".format(particles.shape[0]))
     pid = particles[:,:,-1]
 
-       
+    # calculate jet energy E^2 = p^2 + m^2
     jet_e = np.sqrt(jets[:,0]**2*np.cosh(jets[:,1])**2 + jets[:,3]**2)
     mask = particles[:,:,0]>0    
 
@@ -139,20 +142,21 @@ def preprocess(data,folder,nparts=100, use_pid = True):
     delta_phi[delta_phi<= - np.pi] +=  2*np.pi
 
 
-    points[:,:,0] = (particles[:,:,1] - jets[:,None,1]) # eta
-    points[:,:,1] = delta_phi # phi
-    points[:,:,2] = np.ma.log(1.0 - particles[:,:,0]/jets[:,None,0]).filled(0)    
-    points[:,:,3] = np.ma.log(particles[:,:,0]).filled(0)
-    points[:,:,4] = np.ma.log(1.0 - particles[:,:,3]/jet_e[:,None]).filled(0)
-    points[:,:,5] = np.ma.log(particles[:,:,3]).filled(0)
-    points[:,:,6] = np.hypot(points[:,:,0],points[:,:,1])
+    # These are the 'data' in the .h5 file. Eventually, 'data' and 'jet' are used as X of the dataset.
+    points[:,:,0] = (particles[:,:,1] - jets[:,None,1]) # particle and jet delta_eta
+    points[:,:,1] = delta_phi # particle and jet delta_phi
+    points[:,:,2] = np.ma.log(1.0 - particles[:,:,0]/jets[:,None,0]).filled(0) # particle_pt / particle_jet
+    points[:,:,3] = np.ma.log(particles[:,:,0]).filled(0) # log( particle_pt )
+    points[:,:,4] = np.ma.log(1.0 - particles[:,:,3]/jet_e[:,None]).filled(0) # sth with energy
+    points[:,:,5] = np.ma.log(particles[:,:,3]).filled(0) # log( energy )
+    points[:,:,6] = np.hypot(points[:,:,0],points[:,:,1]) # sqrt( pt^2 + rapidity^2 )
     if use_pid:
-        points[:,:,7] = np.sign(pid)* (pid!=22) * (pid!=130)
-        points[:,:,8] = (np.abs(pid) == 211) | (np.abs(pid) == 321) | (np.abs(pid) == 2212)
-        points[:,:,9] = (np.abs(pid)==130) | (np.abs(pid) == 2112) | (pid == 0)
-        points[:,:,10] = np.abs(pid)==22
-        points[:,:,11] = np.abs(pid)==11
-        points[:,:,12] = np.abs(pid)==13
+        points[:,:,7] = np.sign(pid)* (pid!=22) * (pid!=130) # the charge of particle, excluding photon and kaons
+        points[:,:,8] = (np.abs(pid) == 211) | (np.abs(pid) == 321) | (np.abs(pid) == 2212) # set to True for pions, kaons, or protons
+        points[:,:,9] = (np.abs(pid)==130) | (np.abs(pid) == 2112) | (pid == 0) # True for neutral kaons, neutrons, or unidentified particles
+        points[:,:,10] = np.abs(pid)==22 # True for photons
+        points[:,:,11] = np.abs(pid)==11 # True for electrons
+        points[:,:,12] = np.abs(pid)==13 # True for muons
 
     mult = np.sum(mask,-1)
     points*=mask[:,:nparts,None]
@@ -165,6 +169,7 @@ def preprocess(data,folder,nparts=100, use_pid = True):
     train_nevt = int(0.7*jets.shape[0])
     val_nevt = train_nevt + int(0.2*jets.shape[0])
     
+    # Eventually, 'data' and 'jet' are used as X of the dataset.
     with h5py.File('{}/train_qgcms_pid.h5'.format(folder), "w") as fh5:
         dset = fh5.create_dataset('data', data=points[:train_nevt])
         dset = fh5.create_dataset('jet', data= jets[:train_nevt])
@@ -196,10 +201,12 @@ if __name__=='__main__':
                           cache_dir=flags.folder,
                           collection='CMS2011AJets', 
                           dataset='sim', 
-                          subdatasets={'SIM300_Jet300_pT375-infGeV'}, 
+                          subdatasets={'SIM300_Jet300_pT375-infGeV', 'SIM1400_Jet300_pT375-infGeV', 'SIM800_Jet300_pT375-infGeV', 'SIM1000_Jet300_pT375-infGeV',
+                                       'SIM170_Jet300_pT375-infGeV', 'SIM470_Jet300_pT375-infGeV', 'SIM1800_Jet300_pT375-infGeV', 'SIM600_Jet300_pT375-infGeV'}, 
                           validate_files=False,
                           store_pfcs=True, store_gens=False, verbose=0)
     
     print(dataset)
+
     preprocess(dataset,samples_path)
 

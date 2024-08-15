@@ -7,6 +7,7 @@ import horovod.tensorflow.keras as hvd
 import argparse
 import sys
 import gc
+import matplotlib.pyplot as plt
 
 from PET import PET
 import utils
@@ -30,8 +31,9 @@ def parse_arguments():
     args = parser.parse_args()
     return args
 
-def print_metrics(y_pred, y, thresholds, multi_label=False):
+def print_metrics(y_pred, y, thresholds, multi_label=False, outdir="/pscratch/sd/w/weipow/CMS_Open_Data/CMSQG"):
     if multi_label:
+        print("yes multilabel")
         print("AUC: {}".format(metrics.roc_auc_score(y, y_pred,average='macro',multi_class='ovo')))
         
         one_hot_predictions = np.zeros_like(y_pred)
@@ -46,12 +48,22 @@ def print_metrics(y_pred, y, thresholds, multi_label=False):
             mask = (y[:,idx]==1) | (y[:,bkg_idx]==1) #only keep signal+bkg
             pred_sb = y_pred[mask,idx]/(y_pred[mask,idx] + y_pred[mask,bkg_idx])
             fpr, tpr, _ = metrics.roc_curve(y[mask,idx], pred_sb)
+
+            plt.plot(fpr, tpr, label=f'OmniLearn ROC')
             
             for threshold in thresholds:
                 bineff = np.argmax(tpr>threshold)
                 print('Class {} effS at {} 1.0/effB = {}'.format(idx,tpr[bineff],1.0/fpr[bineff]))
 
+        plt.plot([0, 1], [0, 1], 'k--')  
+        plt.xlabel('False Positive Rate')
+        plt.ylabel('True Positive Rate')
+        plt.title('ROC Curve')
+        plt.legend(loc='lower right')
+        plt.savefig(f"{outdir}/ROC.jpg", dpi=300)
+
     else:
+        print("no multilabel")
         print("AUC: {}".format(metrics.roc_auc_score(y, y_pred)))
         print('Acc: {}'.format(metrics.accuracy_score(y,y_pred>0.5)))
         fpr, tpr, _ = metrics.roc_curve(y, y_pred)
@@ -65,6 +77,15 @@ def print_metrics(y_pred, y, thresholds, multi_label=False):
         fpr=fpr[fpr>1e-4]
         sic = np.ma.divide(tpr,np.sqrt(fpr)).filled(0)
         print("Max SIC: {}".format(np.max(sic)))
+
+        plt.figure(figsize=(10, 6))
+        plt.plot(fpr, tpr, label='Binary ROC')
+        plt.plot([0, 1], [0, 1], 'k--')  # Dashed diagonal
+        plt.xlabel('False Positive Rate')
+        plt.ylabel('True Positive Rate')
+        plt.title('ROC Curve')
+        plt.legend(loc='lower right')
+        plt.savefig(f"{outdir}/ROC.jpg", dpi=300)
 
 
 def get_data_info(flags):
@@ -104,6 +125,7 @@ def get_data_info(flags):
                                      flags.batch,rank = hvd.rank(),size = hvd.size())
         threshold = [0.5,0.8]
         folder_name = 'CMSQG'
+        # multi_label = False # this is for cms_cs
         
     elif flags.dataset == 'jetclass':
         test = utils.JetClassDataLoader(os.path.join(flags.folder,'JetClass','test',
@@ -111,6 +133,13 @@ def get_data_info(flags):
                                         flags.batch)
         threshold = [0.5]
         folder_name = 'JetClass/test'
+
+    # elif flags.dataset == 'cms_cs':
+    #     test = utils.CMSQGDataLoader(os.path.join(flags.folder,'CMSQG', 'test_qgcms_pid.h5'),
+    #                                 flags.batch,rank = hvd.rank(),size = hvd.size())
+    #     threshold = [0.5,0.8]
+    #     folder_name = 'CMSQG'
+    #     multi_label = False
 
     return test,multi_label,threshold,folder_name
 
@@ -142,6 +171,7 @@ def load_or_evaluate_model(flags, test,folder_name):
         
 
         
+        # prepare test dataset for evaluation
         X, y = test.make_eval_data()
         if flags.nid>0:
             #Load alternative runs
@@ -149,10 +179,12 @@ def load_or_evaluate_model(flags, test,folder_name):
         else:
             add_string = ''
 
+        # load model
         model.load_weights(os.path.join(
             flags.folder,'checkpoints',
             utils.get_model_name(flags,fine_tune=flags.fine_tune,add_string=add_string)))
         
+        # gather all y from every work node
         y = hvd.allgather(tf.constant(y)).numpy()
         pred = hvd.allgather(tf.constant(model.predict(X, verbose=hvd.rank() == 0)[0])).numpy()
         if hvd.rank()==0:
@@ -171,7 +203,7 @@ def main():
     y, pred = load_or_evaluate_model(flags, test,folder_name)
 
     # Evaluate results
-    print_metrics(pred, y, thresholds, multi_label=multi_label)
+    print_metrics(pred, y, thresholds, multi_label=multi_label, outdir="/global/homes/w/weipow/My_omnilearn_output")
 
 if __name__ == '__main__':
     main()

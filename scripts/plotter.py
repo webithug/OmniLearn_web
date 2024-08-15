@@ -29,6 +29,9 @@ def load_data(flags):
         
     elif flags.dataset == 'cms':
         test = utils.CMSQGDataLoader(os.path.join(flags.folder,'CMSQG', 'test_qgcms_pid.h5'))
+
+    elif flags.dataset == 'qibin':
+        test = utils.QibinDataLoader(os.path.join(flags.folder,'CMSQG', 'test_qgcms_pid.h5'))    
         
     elif flags.dataset == 'jetnet150':
         test = utils.JetNetDataLoader(os.path.join(flags.folder,'JetNet','test_150.h5'),big=True)
@@ -59,14 +62,16 @@ def load_data(flags):
 def process_particles(test):
     """Process particles and jets from the test dataset."""
     parts, jets = [], []
+    label = []
     for i, file_name in enumerate(test.files):
         if i > 40:
             break
         X, y = test.data_from_file(file_name)
         parts.append(X[0])
         jets.append(X[3])
+        label.append(y)
         del X
-    return np.concatenate(parts), np.concatenate(jets)
+    return np.concatenate(parts), np.concatenate(jets), np.concatenate(label)
 
 def main():
     flags = parse_options()
@@ -74,7 +79,7 @@ def main():
     
     test = load_data(flags)
 
-    parts, jets = process_particles(test)
+    parts, jets, label = process_particles(test)
     print('number of events',parts.shape[0])
     print("number of particles", parts.shape[1])
     print('particles mean',np.mean(parts,(0,1)))
@@ -82,14 +87,21 @@ def main():
     
     print('jets mean',np.mean(jets,0))
     print('jets std',np.std(jets,0))
+
+    print(f"label shape = {label.shape}")
+    print(f"first ten label = {label[0:10]}")
+
+    # make jet info histograms
     for feat in range(len(test.jet_names)):
         flat = jets[:, feat]
         fig, gs, _ = plot_utils.HistRoutine({'{}'.format(flags.dataset): flat}, test.jet_names[feat], 'Normalized Events', plot_ratio=False, reference_name='{}'.format(flags.dataset))
         fig.savefig(f"{flags.plot_folder}/jets_{flags.dataset}_{feat}.pdf", bbox_inches='tight')
 
+
     print("Maximum number of particles",np.max(np.sum(parts[:, :, 0]!=0,1)))
     mask = parts[:, :, 0].reshape(-1) != 0
 
+    # # make particle info histograms
     for feat in range(len(test.part_names)):
         flat = parts[:, :, feat].reshape(-1)
         flat = flat[mask]

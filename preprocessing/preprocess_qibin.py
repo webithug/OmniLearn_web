@@ -117,12 +117,20 @@ def preprocess(input_path="/pscratch/sd/w/weipow/QibinData/Dr7v8a.analysis_mtt80
 
     tree = file["t"]
 
-    # # print branch names
-    # print("below are the branches:")
-    # branch_names = tree.keys()
-    # for branch in branch_names:
-    #     print(branch)
-    # raise
+    # print branch names
+    print("below are the branches:")
+    branch_names = tree.keys()
+    for branch in branch_names:
+        print(branch)
+
+    jets_eta = tree["jets_eta"].array()
+    truth_ujet_pt = tree["truth_ujet_pt"].array()
+    truth_djet_pt = tree["truth_djet_pt"].array()
+
+    print(len(jets_eta))
+    print(len(truth_ujet_pt))
+    print(len(truth_djet_pt))
+    raise
 
     # use less data when debug
     debug = False
@@ -337,8 +345,8 @@ def preprocess(input_path="/pscratch/sd/w/weipow/QibinData/Dr7v8a.analysis_mtt80
     
     # create points, jets(subjets), y
 
-    ## points has particle info. the dim is (n, s, p, d), 
-    ## where n: number of events, s: number of subjets, p:numbr of particles inside subjet, d: number of features
+    ## points has particle info. the dim is (n, p, d), 
+    ## where n: number of subjets, p:numbr of particles inside subjet, d: number of features
     points = np.zeros((n_subjets_total, n_particles, n_features))
     
     ### make the features of particles

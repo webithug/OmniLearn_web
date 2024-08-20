@@ -145,9 +145,9 @@ def preprocess(data,folder,nparts=100, use_pid = True):
     # These are the 'data' in the .h5 file. Eventually, 'data' and 'jet' are used as X of the dataset.
     points[:,:,0] = (particles[:,:,1] - jets[:,None,1]) # particle and jet delta_eta
     points[:,:,1] = delta_phi # particle and jet delta_phi
-    points[:,:,2] = np.ma.log(1.0 - particles[:,:,0]/jets[:,None,0]).filled(0) # particle_pt / particle_jet
+    points[:,:,2] = np.ma.log(1.0 - particles[:,:,0]/jets[:,None,0]).filled(0) # log(particle_pt / jet_pt)
     points[:,:,3] = np.ma.log(particles[:,:,0]).filled(0) # log( particle_pt )
-    points[:,:,4] = np.ma.log(1.0 - particles[:,:,3]/jet_e[:,None]).filled(0) # sth with energy
+    points[:,:,4] = np.ma.log(1.0 - particles[:,:,3]/jet_e[:,None]).filled(0) # log( 1 - particle_energy / jet_energy )
     points[:,:,5] = np.ma.log(particles[:,:,3]).filled(0) # log( energy )
     points[:,:,6] = np.hypot(points[:,:,0],points[:,:,1]) # sqrt( pt^2 + rapidity^2 )
     if use_pid:

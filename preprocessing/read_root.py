@@ -4,11 +4,12 @@ import numpy as np
 import awkward as ak
 
 # Open the ROOT file using uproot
-file = uproot.open("/pscratch/sd/w/weipow/QibinData/Dr7v8.analysis_mtt800.10k.0.root")
+file = uproot.open("/pscratch/sd/w/weipow/YuleiData/ntuples.boosted.v0817.20k.root")
 
-print(file.keys())
 
-tree = file["t"]
+print(f"key = {file.keys()}")
+
+tree = file["qe"]
 
 # print branch names
 print("below are the branches:")

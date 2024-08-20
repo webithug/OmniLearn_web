@@ -49,15 +49,16 @@ def print_metrics(y_pred, y, thresholds, multi_label=False, outdir="/pscratch/sd
             pred_sb = y_pred[mask,idx]/(y_pred[mask,idx] + y_pred[mask,bkg_idx])
             fpr, tpr, _ = metrics.roc_curve(y[mask,idx], pred_sb)
 
-            plt.plot(fpr, tpr, label=f'OmniLearn ROC')
+            plt.plot(tpr, 1-fpr, label=f'OmniLearn ROC')
             
             for threshold in thresholds:
                 bineff = np.argmax(tpr>threshold)
                 print('Class {} effS at {} 1.0/effB = {}'.format(idx,tpr[bineff],1.0/fpr[bineff]))
 
-        plt.plot([0, 1], [0, 1], 'k--')  
-        plt.xlabel('False Positive Rate')
-        plt.ylabel('True Positive Rate')
+        # plot ROC 
+        plt.plot([0, 1], [1, 0], 'k--')  
+        plt.ylabel('1 - False Positive Rate')
+        plt.xlabel('True Positive Rate')
         plt.title('ROC Curve')
         plt.legend(loc='lower right')
         plt.savefig(f"{outdir}/ROC.jpg", dpi=300)

@@ -13,7 +13,7 @@ def parse_options():
     """Parse command line options."""
     from argparse import ArgumentParser
     parser = ArgumentParser(description="Process some integers.")
-    parser.add_argument("--dataset", type=str, default="top", help="Folder containing input files")
+    parser.add_argument("--dataset", type=str, default="cms", help="Folder containing input files")
     parser.add_argument("--folder", type=str, default="/pscratch/sd/v/vmikuni/PET/", help="Folder containing input files")
     parser.add_argument("--plot_folder", type=str, default="../plots", help="Folder to save the outputs")
     parser.add_argument("--n_bins", type=int, default=50, help="Number of bins for the histograms")
@@ -109,7 +109,9 @@ def main():
     print(f"first ten label = {label[0:10]}")
 
     # make jet info histograms: comparing cms data with qibin data 0807
-    for feat in range(len(test.jet_names)):
+    for feat in range( len(test.jet_names) ):
+        print(f"feature len = {len(test.jet_names)}")
+
         flat = jets[:, feat]
         # fig, gs, _ = plot_utils.HistRoutine({'{}'.format(flags.dataset): flat}, test.jet_names[feat], 'Normalized Events', plot_ratio=False, reference_name='{}'.format(flags.dataset))
         # fig.savefig(f"{flags.plot_folder}/jets_{flags.dataset}_{feat}.pdf", bbox_inches='tight')

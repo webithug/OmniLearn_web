@@ -5,6 +5,44 @@ import numpy as np
 from optparse import OptionParser
 import energyflow as ef
 from tqdm import tqdm
+import matplotlib.pyplot as plt
+
+
+def plot_hist(c_pt, s_pt):
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 8), sharex=True,gridspec_kw={"height_ratios": (3, 1)})
+    
+    # Define bin edges and centers
+    num_bins = 50  # Adjust this value based on your data and preference
+    bins = np.linspace(-50, 50, num_bins + 1)  # Define bins from -50 to 50
+    bin_centers = 0.5 * (bins[1:] + bins[:-1])
+    
+    # Calculate histograms for both datasets
+    counts_c, _ = np.histogram(c_pt, bins=num_bins)
+    counts_s, _ = np.histogram(s_pt, bins=bins)            
+
+    # Calculate the ratio and its uncertainty
+    ratio = counts_c / counts_s
+    uncertainty_ratio = ratio * np.sqrt((1 / counts_c) + (1 / counts_s))
+
+    # Upper panel: Histograms of C and S
+    ax1.hist(bin_centers, bins=bins, weights=counts_c, alpha=0.5, label='c jets', color='blue', density=True, log=True, histtype='step')
+    ax1.hist(bin_centers, bins=bins, weights=counts_s, alpha=0.5, label='s jets', color='hotpink', density=True, log=True, histtype='step')
+    ax1.set_title('CMS Data Jets')
+    ax1.set_xlabel('Jet Charge')
+    ax1.set_ylabel('Normalized Events (log)')
+    ax1.legend()
+    ax1.grid(True)
+
+    # Lower panel: Ratio plot with uncertainties
+    ax2.errorbar(bin_centers, ratio, yerr=uncertainty_ratio, fmt='o', color='black', label='C/S')
+    ax2.axhline(1, color='gray', linestyle='--')  # Reference line at ratio=1
+    # ax2.set_xlabel('Bin')
+    ax2.set_ylabel('C/S')
+    ax2.legend()
+    ax2.grid(True)
+
+    plt.savefig(f"/global/homes/w/weipow/My_omnilearn_output/0819_plot_jetcharge/cms_jetcharge.jpg", dpi=300)
+    plt.close()
 
 def pad_and_combine(arrays,M):
     F = arrays[0].shape[1] -1 #skip vertex information
@@ -151,12 +189,14 @@ def preprocess(data,folder,nparts=100, use_pid = True):
     points[:,:,5] = np.ma.log(particles[:,:,3]).filled(0) # log( energy )
     points[:,:,6] = np.hypot(points[:,:,0],points[:,:,1]) # sqrt( pt^2 + rapidity^2 )
     if use_pid:
-        points[:,:,7] = np.sign(pid)* (pid!=22) * (pid!=130) # the charge of particle, excluding photon and kaons
+        points[:,:,7] = np.sign(pid) * (pid!=22) * (pid!=130) # the charge of particle, excluding photon and kaons
         points[:,:,8] = (np.abs(pid) == 211) | (np.abs(pid) == 321) | (np.abs(pid) == 2212) # set to True for pions, kaons, or protons
         points[:,:,9] = (np.abs(pid)==130) | (np.abs(pid) == 2112) | (pid == 0) # True for neutral kaons, neutrons, or unidentified particles
         points[:,:,10] = np.abs(pid)==22 # True for photons
         points[:,:,11] = np.abs(pid)==11 # True for electrons
         points[:,:,12] = np.abs(pid)==13 # True for muons
+
+
 
     mult = np.sum(mask,-1)
     points*=mask[:,:nparts,None]
@@ -201,8 +241,9 @@ if __name__=='__main__':
                           cache_dir=flags.folder,
                           collection='CMS2011AJets', 
                           dataset='sim', 
-                          subdatasets={'SIM300_Jet300_pT375-infGeV', 'SIM1400_Jet300_pT375-infGeV', 'SIM800_Jet300_pT375-infGeV', 'SIM1000_Jet300_pT375-infGeV',
-                                       'SIM170_Jet300_pT375-infGeV', 'SIM470_Jet300_pT375-infGeV', 'SIM1800_Jet300_pT375-infGeV', 'SIM600_Jet300_pT375-infGeV'}, 
+                          subdatasets = {'SIM300_Jet300_pT375-infGeV'},
+                        #   subdatasets={'SIM300_Jet300_pT375-infGeV', 'SIM1400_Jet300_pT375-infGeV', 'SIM800_Jet300_pT375-infGeV', 'SIM1000_Jet300_pT375-infGeV',
+                        #                'SIM170_Jet300_pT375-infGeV', 'SIM470_Jet300_pT375-infGeV', 'SIM1800_Jet300_pT375-infGeV', 'SIM600_Jet300_pT375-infGeV'}, 
                           validate_files=False,
                           store_pfcs=True, store_gens=False, verbose=0)
     

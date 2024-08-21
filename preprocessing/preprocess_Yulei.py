@@ -7,7 +7,7 @@ from ROOT import TLorentzVector
 import matplotlib.pyplot as plt
 from optparse import OptionParser
 
-def plot_hist(c_pt, s_pt):
+def plot_hist(c_pt, s_pt, c_constituents, s_constituents):
     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(8, 8), sharex=True,gridspec_kw={"height_ratios": (3, 1)})
     
     # Define bin edges and centers
@@ -24,8 +24,8 @@ def plot_hist(c_pt, s_pt):
     uncertainty_ratio = ratio * np.sqrt((1 / counts_c) + (1 / counts_s))
 
     # Upper panel: Histograms of C and S
-    ax1.hist(bin_centers, bins=bins, weights=counts_c, alpha=0.5, label='c jets', color='blue', density=True, log=True, histtype='step')
-    ax1.hist(bin_centers, bins=bins, weights=counts_s, alpha=0.5, label='s jets', color='hotpink', density=True, log=True, histtype='step')
+    ax1.hist(bin_centers, bins=bins, weights=counts_c, alpha=0.5, label=f'u jets. Neutral={c_constituents[0]}, Pos.={c_constituents[1]}, Neg.={c_constituents[2]}', color='blue', density=True, log=True, histtype='step')
+    ax1.hist(bin_centers, bins=bins, weights=counts_s, alpha=0.5, label=f'd jets. Neutral={s_constituents[0]}, Pos.={s_constituents[1]}, Neg.={s_constituents[2]}', color='hotpink', density=True, log=True, histtype='step')
     ax1.set_title('Qibin Data Jets')
     ax1.set_xlabel('Jet Charge')
     ax1.set_ylabel('Normalized Events (log)')
@@ -43,7 +43,7 @@ def plot_hist(c_pt, s_pt):
     plt.savefig(f"/global/homes/w/weipow/My_omnilearn_output/0819_plot_jetcharge/yulei_jetcharge.jpg", dpi=300)
     plt.close()
 
-def preprocess(input_path="/pscratch/sd/w/weipow/YuleiData/Yulei_0818.root", output_path="/pscratch/sd/w/weipow/YuleiData/processed_data"):
+def preprocess_truth(input_path="/pscratch/sd/w/weipow/YuleiData/output_0820.root", output_path="/pscratch/sd/w/weipow/YuleiData/processed_data"):
     # Open the ROOT file using uproot
     file = uproot.open(input_path)
 
@@ -57,9 +57,164 @@ def preprocess(input_path="/pscratch/sd/w/weipow/YuleiData/Yulei_0818.root", out
     # for branch in branch_names:
     #     print(branch)
 
+    # raise
+
+    debug = True
+    if debug:
+        truth_particles_pid = tree["obj_TruthParticles_PID"].array()[0:100]
+        truth_particles_charge = tree["obj_TruthParticles_Charge"].array()[0:100]
+        truth_particles_mass = tree["obj_TruthParticles_Mass"].array()[0:100]
+        truth_particles_energy = tree["obj_TruthParticles_E"].array()[0:100]
+        truth_particles_px = tree["obj_TruthParticles_Px"].array()[0:100]
+        truth_particles_py = tree["obj_TruthParticles_Py"].array()[0:100]
+        truth_particles_pz = tree["obj_TruthParticles_Pz"].array()[0:100]
+        truth_particles_in_b_had = tree["obj_TruthParticles_in_b_had"].array()[0:100]
+        truth_particles_in_b_lep = tree["obj_TruthParticles_in_b_lep"].array()[0:100]
+        truth_particles_in_up_jet = tree["obj_TruthParticles_in_up_jet"].array()[0:100]
+        truth_particles_in_down_jet = tree["obj_TruthParticles_in_down_jet"].array()[0:100]
+        truth_particles_in_top_had = tree["obj_TruthParticles_in_top_had"].array()[0:100]
+        truth_particles_in_top_lep = tree["obj_TruthParticles_in_top_lep"].array()[0:100]
+        truth_particles_in_W_had = tree["obj_TruthParticles_in_W_had"].array()[0:100]
+        truth_particles_in_W_lep = tree["obj_TruthParticles_in_W_lep"].array()[0:100]
+
+    else:
+        truth_particles_pid = tree["obj_TruthParticles_PID"].array()
+        truth_particles_charge = tree["obj_TruthParticles_Charge"].array()
+        truth_particles_mass = tree["obj_TruthParticles_Mass"].array()
+        truth_particles_energy = tree["obj_TruthParticles_E"].array()
+        truth_particles_px = tree["obj_TruthParticles_Px"].array()
+        truth_particles_py = tree["obj_TruthParticles_Py"].array()
+        truth_particles_pz = tree["obj_TruthParticles_Pz"].array()
+        truth_particles_in_b_had = tree["obj_TruthParticles_in_b_had"].array()
+        truth_particles_in_b_lep = tree["obj_TruthParticles_in_b_lep"].array()
+        truth_particles_in_up_jet = tree["obj_TruthParticles_in_up_jet"].array()
+        truth_particles_in_down_jet = tree["obj_TruthParticles_in_down_jet"].array()
+        truth_particles_in_top_had = tree["obj_TruthParticles_in_top_had"].array()
+        truth_particles_in_top_lep = tree["obj_TruthParticles_in_top_lep"].array()
+        truth_particles_in_W_had = tree["obj_TruthParticles_in_W_had"].array()
+        truth_particles_in_W_lep = tree["obj_TruthParticles_in_W_lep"].array()
+        
+
+
+    # create array for storing number of c,s in each event
+    c_count = np.abs(ak.sum( truth_particles_pid[np.abs(truth_particles_pid)==4], axis=1 )) / 4
+    s_count = np.abs(ak.sum( truth_particles_pid[np.abs(truth_particles_pid)==3], axis=1 )) / 3
+    u_count = np.abs(ak.sum( truth_particles_pid[np.abs(truth_particles_pid)==2], axis=1 )) / 2
+    d_count = np.abs(ak.sum( truth_particles_pid[np.abs(truth_particles_pid)==1], axis=1 )) / 1
+    
+    print("count")
+    print(len(c_count))
+    print(s_count)
+    print(s_count)
+
+    # get particle of c jets, and calculate jetcharge
+    c_constituents = truth_particles_in_up_jet[c_count>0] # getting events with c quark
+    c_constituents_pid = (truth_particles_pid[c_count>0])[c_constituents>0]
+    c_constituents_px = (truth_particles_px[c_count>0])[c_constituents>0]
+    c_constituents_py = (truth_particles_py[c_count>0])[c_constituents>0]
+    c_constituents_charge = (truth_particles_charge[c_count>0])[c_constituents>0]
+    c_constituents_pt = np.sqrt( c_constituents_px**2 + c_constituents_py**2 )
+    weighted_charge = ak.sum(c_constituents_charge * c_constituents_pt, axis=1)
+    c_jet_pt = ak.sum(c_constituents_pt, axis=1)
+    c_jet_charge = weighted_charge / c_jet_pt
+
+    c_jet_neutral_count = np.count_nonzero( c_constituents_charge==0 )
+    c_jet_pos_count = np.count_nonzero( c_constituents_charge==1 )
+    c_jet_neg_count = np.count_nonzero( c_constituents_charge==-1 )
+
+    # print(c_jet_charge)
+    # print(len(c_jet_charge))
+    # print(c_constituents_pid[0])
+
+    # get particle of s jets
+    s_constituents = truth_particles_in_down_jet[s_count>0]
+    s_constituents_pid = (truth_particles_pid[s_count>0])[s_constituents>0]
+    s_constituents_px = (truth_particles_px[s_count>0])[s_constituents>0]
+    s_constituents_py = (truth_particles_py[s_count>0])[s_constituents>0]
+    s_constituents_charge = (truth_particles_charge[s_count>0])[s_constituents>0]
+    s_constituents_pt = np.sqrt( s_constituents_px**2 + s_constituents_py**2 )
+    weighted_charge = ak.sum(s_constituents_charge * s_constituents_pt, axis=1)
+    s_jet_pt = ak.sum(s_constituents_pt, axis=1)
+    s_jet_charge = weighted_charge / s_jet_pt
+
+    s_jet_neutral_count = np.count_nonzero( s_constituents_charge==0 )
+    s_jet_pos_count = np.count_nonzero( s_constituents_charge==1 )
+    s_jet_neg_count = np.count_nonzero( s_constituents_charge==-1 )
+
+    print("constituents")
+    print(len(c_constituents))
+    print(len(c_constituents))
+    print(s_constituents[c_constituents==1])
+
+    # print(s_jet_charge)
+    # print(len(s_jet_charge))
+    # print(s_constituents_pid[0])
+
+    # plot cs jet charge distribution
+    plot_hist(c_jet_charge, s_jet_charge, [c_jet_neutral_count, c_jet_pos_count, c_jet_neg_count], [s_jet_neutral_count, s_jet_pos_count, s_jet_neg_count])
+
+    # # get particle of u jets
+    # u_constituents = truth_particles_in_up_jet[u_count>0]
+    # u_constituents_pid = (truth_particles_pid[u_count>0])[u_constituents>0]
+    # u_constituents_px = (truth_particles_px[u_count>0])[u_constituents>0]
+    # u_constituents_py = (truth_particles_py[u_count>0])[u_constituents>0]
+    # u_constituents_charge = (truth_particles_charge[u_count>0])[u_constituents>0]
+    # u_constituents_pt = np.sqrt( u_constituents_px**2 + u_constituents_py**2 )
+    # weighted_charge = ak.sum(u_constituents_charge * u_constituents_pt, axis=1)
+    # u_jet_pt = ak.sum(u_constituents_pt, axis=1)
+    # u_jet_charge = weighted_charge / u_jet_pt
+
+    # u_jet_neutral_count = np.count_nonzero( u_constituents_charge==0 )
+    # u_jet_pos_count = np.count_nonzero( u_constituents_charge==1 )
+    # u_jet_neg_count = np.count_nonzero( u_constituents_charge==-1 )
+
+    # print(u_jet_charge)
+    # print(len(u_jet_charge))
+
+    # # get particle of d jets
+    # d_constituents = truth_particles_in_down_jet[d_count>0]
+    # d_constituents_pid = (truth_particles_pid[d_count>0])[d_constituents>0]
+    # d_constituents_px = (truth_particles_px[d_count>0])[d_constituents>0]
+    # d_constituents_py = (truth_particles_py[d_count>0])[d_constituents>0]
+    # d_constituents_charge = (truth_particles_charge[d_count>0])[d_constituents>0]
+    # d_constituents_pt = np.sqrt( d_constituents_px**2 + d_constituents_py**2 )
+    # weighted_charge = ak.sum(d_constituents_charge * d_constituents_pt, axis=1)
+    # d_jet_pt = ak.sum(d_constituents_pt, axis=1)
+    # d_jet_charge = weighted_charge / d_jet_pt
+
+    # d_jet_neutral_count = np.count_nonzero( d_constituents_charge==0 )
+    # d_jet_pos_count = np.count_nonzero( d_constituents_charge==1 )
+    # d_jet_neg_count = np.count_nonzero( d_constituents_charge==-1 )
+
+    # print(d_jet_charge)
+    # print(len(d_jet_charge))
+
+    # # plot ud jet charge distribution
+    # plot_hist(u_jet_charge, d_jet_charge, [u_jet_neutral_count, u_jet_pos_count, u_jet_neg_count], [d_jet_neutral_count, d_jet_pos_count, d_jet_neg_count])
+
+    
+
+
+
+def preprocess(input_path="/pscratch/sd/w/weipow/YuleiData/output_0820.root", output_path="/pscratch/sd/w/weipow/YuleiData/processed_data"):
+    # Open the ROOT file using uproot
+    file = uproot.open(input_path)
+
+    print(file.keys())
+
+    tree = file["qe"]
+
+    # # print branch names
+    # print("below are the branches:")
+    # branch_names = tree.keys()
+    # for branch in branch_names:
+    #     print(branch)
+
+    # raise
+
 
     # load data 
-    debug = False
+    debug = True
     if debug:
         truth_particles_pid = tree["obj_TruthParticles_PID"].array()[0:100]
         truth_particles_charge = tree["obj_TruthParticles_Charge"].array()[0:100]
@@ -78,6 +233,16 @@ def preprocess(input_path="/pscratch/sd/w/weipow/YuleiData/Yulei_0818.root", out
         truth_particles_py = tree["obj_TruthParticles_Py"].array()
         truth_particles_pz = tree["obj_TruthParticles_Pz"].array()
 
+    print(np.count_nonzero( np.abs(ak.flatten(truth_particles_pid)) == 1 ))
+    print(np.count_nonzero( np.abs(ak.flatten(truth_particles_pid)) == 2 ))
+    print(np.count_nonzero( np.abs(ak.flatten(truth_particles_pid)) == 3 ))
+    print(np.count_nonzero( np.abs(ak.flatten(truth_particles_pid)) == 4 ))
+    # print(truth_particles_pid)
+    # print(ak.flatten(truth_particles_pid))
+
+
+    
+
 
 
     # pflows_in_up_jet = tree["obj_pflows_in_up_jet"].array()
@@ -92,23 +257,40 @@ def preprocess(input_path="/pscratch/sd/w/weipow/YuleiData/Yulei_0818.root", out
     # print(len(pflows_in_down_jet))
     # print(pflows_in_down_jet[9997])
 
+    # # print quarks
     # for particle in particles_pid[0]:
     #     if np.abs(particle )<= 6:
     #         print(particle)
+
 
     # for i, subarray in enumerate(pflows_in_up_jet):
     #     if len(subarray) > 0:  # Check if the subarray is not empty
     #         print(i)
     #         print(subarray)
 
+
     # find the quarks, get their data
-    truth_cs_pid = truth_particles_pid[ (truth_particles_pid==3) | (truth_particles_pid==4 )]
-    truth_cs_charge = truth_particles_charge[ (truth_particles_pid==3) | (truth_particles_pid==4) ]
-    truth_cs_mass = truth_particles_mass[ (truth_particles_pid==3) | (truth_particles_pid==4) ]
-    truth_cs_energy = truth_particles_energy[ (truth_particles_pid==3) | (truth_particles_pid==4) ]
-    truth_cs_px = truth_particles_px[ (truth_particles_pid==3) | (truth_particles_pid==4) ]
-    truth_cs_py = truth_particles_py[ (truth_particles_pid==3) | (truth_particles_pid==4) ]
-    truth_cs_pz = truth_particles_pz[ (truth_particles_pid==3) | (truth_particles_pid==4) ]
+
+    # get cs 
+    mask_cs = ( np.abs(truth_particles_pid)==3) | (np.abs(truth_particles_pid)==4 )
+    truth_cs_pid = truth_particles_pid[ mask_cs ]
+    truth_cs_charge = truth_particles_charge[ mask_cs ]
+    truth_cs_mass = truth_particles_mass[ mask_cs ]
+    truth_cs_energy = truth_particles_energy[ mask_cs ]
+    truth_cs_px = truth_particles_px[ mask_cs ]
+    truth_cs_py = truth_particles_py[ mask_cs ]
+    truth_cs_pz = truth_particles_pz[ mask_cs ]
+
+    # # get ud
+    # mask_ud = ( np.abs(truth_particles_pid)==1) | (np.abs(truth_particles_pid)==2 )
+    # truth_cs_pid = truth_particles_pid[ mask_ud ]
+    # truth_cs_charge = truth_particles_charge[ mask_ud ]
+    # truth_cs_mass = truth_particles_mass[ mask_ud ]
+    # truth_cs_energy = truth_particles_energy[ mask_ud ]
+    # truth_cs_px = truth_particles_px[ mask_ud ]
+    # truth_cs_py = truth_particles_py[ mask_ud ]
+    # truth_cs_pz = truth_particles_pz[ mask_ud ]
+
     
     print(f"truth cs charge: {truth_cs_charge}")
     print(f"truth cs mass: {truth_cs_mass}")
@@ -223,16 +405,63 @@ def preprocess(input_path="/pscratch/sd/w/weipow/YuleiData/Yulei_0818.root", out
     print("calculating jet charge")
 
     cs_subjet_events_jetCharge = []
+    c_neutral_parts_count = 0
+    c_pos_parts_count = 0
+    c_neg_parts_count = 0
+    s_neutral_parts_count = 0
+    s_pos_parts_count = 0
+    s_neg_parts_count = 0
+    u_neutral_parts_count = 0
+    u_pos_parts_count = 0
+    u_neg_parts_count = 0
+    d_neutral_parts_count = 0
+    d_pos_parts_count = 0
+    d_neg_parts_count = 0
     for subjet in range( len(truth_cs_pid) ):
+
         particle_pt = np.sqrt(cs_subjet_events_px[subjet]**2 + cs_subjet_events_py[subjet]**2)
-        weighted_charge = cs_subjet_events_charge[subjet] * particle_pt
+        
+        # keep only particles of charge < 50
+        particle_pt = particle_pt[cs_subjet_events_charge[subjet] < 50]
+
+        len_before = np.array(cs_subjet_events_charge[subjet]).shape[0]
+
+        particle_charge = np.array(cs_subjet_events_charge[subjet])[cs_subjet_events_charge[subjet] < 50]
+        
+        len_after = len(particle_charge)
+        if len_before != len_after:
+            print(len_before, len_after)
+
+        weighted_charge = particle_charge * particle_pt
         jet_pt = ak.sum( particle_pt, axis=0 ) 
         if jet_pt==0:
+            # print(truth_cs_pid[subjet])
             jet_charge = 0
         else:
             jet_charge = ak.sum(weighted_charge, axis=0) / jet_pt
         
         cs_subjet_events_jetCharge.append(jet_charge)
+
+        # calculate number of neutral, positive, negative particles
+        if np.abs(truth_cs_pid[subjet]) == 3: # s
+            print("s jet")
+            s_neutral_parts_count += np.count_nonzero(cs_subjet_events_charge[subjet]==0)
+            s_pos_parts_count += np.count_nonzero(cs_subjet_events_charge[subjet]==1)
+            s_neg_parts_count += np.count_nonzero(cs_subjet_events_charge[subjet]==-1)
+        elif np.abs(truth_cs_pid[subjet]) == 4: # c
+            c_neutral_parts_count += np.count_nonzero(cs_subjet_events_charge[subjet]==0)
+            c_pos_parts_count += np.count_nonzero(cs_subjet_events_charge[subjet]==1)
+            c_neg_parts_count += np.count_nonzero(cs_subjet_events_charge[subjet]==-1)
+        elif np.abs(truth_cs_pid[subjet]) == 1: # d
+            d_neutral_parts_count += np.count_nonzero(cs_subjet_events_charge[subjet]==0)
+            d_pos_parts_count += np.count_nonzero(cs_subjet_events_charge[subjet]==1)
+            d_neg_parts_count += np.count_nonzero(cs_subjet_events_charge[subjet]==-1)
+        elif np.abs(truth_cs_pid[subjet]) == 2: # u
+            u_neutral_parts_count += np.count_nonzero(cs_subjet_events_charge[subjet]==0)
+            u_pos_parts_count += np.count_nonzero(cs_subjet_events_charge[subjet]==1)
+            u_neg_parts_count += np.count_nonzero(cs_subjet_events_charge[subjet]==-1)
+
+
 
     cs_subjet_events_jetCharge = np.array(cs_subjet_events_jetCharge)
     print(cs_subjet_events_jetCharge)
@@ -240,10 +469,21 @@ def preprocess(input_path="/pscratch/sd/w/weipow/YuleiData/Yulei_0818.root", out
 
 
     # plot jet charge distribution
-    s_jetcharge = cs_subjet_events_jetCharge[np.array(truth_cs_pid)==3]
-    c_jetcharge = cs_subjet_events_jetCharge[np.array(truth_cs_pid)==4]
 
-    plot_hist(c_jetcharge, s_jetcharge)
+    s_jetcharge = cs_subjet_events_jetCharge[np.array(np.abs(truth_cs_pid))==3]
+    c_jetcharge = cs_subjet_events_jetCharge[np.array(np.abs(truth_cs_pid))==4]
+    s_constituents = [s_neutral_parts_count, s_pos_parts_count, s_neg_parts_count]
+    c_constituents = [c_neutral_parts_count, c_pos_parts_count, c_neg_parts_count]
+    plot_hist(c_jetcharge, s_jetcharge, c_constituents, s_constituents)
+    print(s_jetcharge)
+
+    # d_jetcharge = cs_subjet_events_jetCharge[np.array(np.abs(truth_cs_pid))==1]
+    # u_jetcharge = cs_subjet_events_jetCharge[np.array(np.abs(truth_cs_pid))==2]
+    # d_constituents = [d_neutral_parts_count, d_pos_parts_count, d_neg_parts_count]
+    # u_constituents = [u_neutral_parts_count, u_pos_parts_count, u_neg_parts_count]
+    # plot_hist(u_jetcharge, d_jetcharge, u_constituents, d_constituents)
+
+    
     
 
 
@@ -254,4 +494,5 @@ if __name__ == '__main__':
     parser.add_option("--folder", type="string", default='/pscratch/sd/v/vmikuni/QGCMS', help="Folder containing input files")
     (flags, args) = parser.parse_args()
 
-    preprocess()
+    # preprocess()
+    preprocess_truth()
